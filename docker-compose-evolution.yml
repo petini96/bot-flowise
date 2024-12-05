@@ -1,0 +1,52 @@
+version: '3.3'
+
+services:
+
+  postgresql:
+    image: postgres:13
+    restart: always
+    ports:
+      - '5434:5432'
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    env_file: .env.db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - rede
+
+  redis:
+    image: redis:latest
+    networks:
+      - rede
+    container_name: redis
+    env_file: .env.redis
+    command: >
+      redis-server --port 6379 --appendonly yes
+    volumes:
+      - evolution_redis:/data
+    ports:
+      - 6380:6379
+
+  evolution-api:
+      container_name: evolution_api
+      image: atendai/evolution-api:v2.1.1
+      restart: always
+      ports:
+        - "8080:8080"
+      env_file: .env.evolution
+      volumes:
+        - evolution_instances:/evolution/instances
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+      networks:
+        - rede
+
+volumes:
+  db_data:
+  evolution_instances:
+  evolution_redis:
+
+networks:
+  rede:
+    driver: bridge

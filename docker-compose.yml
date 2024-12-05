@@ -1,0 +1,233 @@
+version: '3.3'
+
+services:
+  typebot-db:
+    image: postgres:13
+    restart: always
+    ports:
+      - '5432:5432'
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: typebot
+      POSTGRES_PASSWORD: typebot
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - rede
+
+  redis:
+    image: redis:latest
+    networks:
+      - rede
+    container_name: redis
+    env_file: .env.redis
+    command: >
+      redis-server --port 6379 --appendonly yes
+    volumes:
+      - evolution_redis:/data
+    ports:
+      - 6379:6379
+      
+  typebot-builder:
+    ports:
+      - 3001:3000
+    image: baptistearno/typebot-builder:latest
+    restart: always
+    depends_on:
+      - typebot-db
+    env_file: .env.typebot.builder
+    networks:
+      - rede
+
+  typebot-viewer:
+    ports:
+      - '3002:3000'
+    image: baptistearno/typebot-viewer:latest
+    restart: always
+    env_file: .env.typebot.viewer
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - rede
+
+  mail:
+    image: bytemark/smtp
+    restart: always
+    networks:
+      - rede
+
+  minio:
+    labels:
+      virtual.host: 'host.docker.internal/s3'
+      virtual.port: '9000'
+      virtual.tls-email:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    env_file: .env.minio
+    volumes:
+      - s3_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://host.docker.internal/storage/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - rede
+
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: on-failure
+    entrypoint: >
+      /bin/sh -c "
+      sleep 10;
+      /usr/bin/mc config host add minio http://minio:9000 minio minio123;
+      /usr/bin/mc mb minio/typebot;
+      /usr/bin/mc mb minio/mybucket;
+      /usr/bin/mc anonymous set public minio/mybucket;
+      exit 0;"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - rede
+
+  evolution-api:
+      container_name: evolution_api
+      image: atendai/evolution-api:v2.1.1
+      restart: always
+      ports:
+        - "8080:8080"
+      env_file: .env.evolution
+      volumes:
+        - evolution_instances:/evolution/instances
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.evolutionapi.rule=Host(`cb0b-177-5-247-196.ngrok-free.app`) && PathPrefix(`/api/evolution`)
+        - traefik.http.services.evolutionapi.loadbalancer.server.port=8080
+      networks:
+        - rede
+
+  traefik:
+    container_name: traefik
+    image: "traefik"
+    restart: always
+    command:
+      - "--api=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - --providers.docker=true
+      - --providers.file.directory=/etc/traefik/dynamic_conf
+      - --providers.file.watch=true
+      # - "--entrypoints.websecure.http.tls.certificates[0].certFile=/certs/selfsigned.crt"
+      # - "--entrypoints.websecure.http.tls.certificates[0].keyFile=/certs/selfsigned.key"
+      # - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
+      # - "--certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}"
+      # - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # - traefik_data:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /home/vinicius/flowise/certs:/certs
+      # - /home/vinicius/flowise/traefik.toml:/etc/traefik/traefik.toml
+      - /home/vinicius/flowise/traefik.yml:/etc/traefik/dynamic_conf/conf.yml:ro
+    networks:
+        - rede
+
+  n8n:
+    container_name: n8n
+    image: docker.n8n.io/n8nio/n8n
+    restart: always
+    ports:
+      - "0.0.0.0:5678:5678"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.n8n.rule=Host(`cb0b-177-5-247-196.ngrok-free.app`)
+       - traefik.http.services.n8n.loadbalancer.server.port=5678
+      # - traefik.http.routers.n8n.rule=Host(`${DOMAIN_NAME}`)
+      # - traefik.http.routers.n8n.tls=false
+      # - traefik.http.routers.n8n.entrypoints=web,websecure
+      # - traefik.http.routers.n8n.tls.certresolver=mytlschallenge
+      # - traefik.http.middlewares.n8n.headers.SSLRedirect=false
+      # - traefik.http.middlewares.n8n.headers.STSSeconds=315360000
+      # - traefik.http.middlewares.n8n.headers.browserXSSFilter=true
+      # - traefik.http.middlewares.n8n.headers.contentTypeNosniff=true
+      # - traefik.http.middlewares.n8n.headers.forceSTSHeader=true
+      # - traefik.http.middlewares.n8n.headers.SSLHost=${DOMAIN_NAME}
+      # - traefik.http.middlewares.n8n.headers.STSIncludeSubdomains=true
+      # - traefik.http.middlewares.n8n.headers.STSPreload=true
+      # - traefik.http.routers.n8n.middlewares=n8n@docker
+    env_file: .env.n8n
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+        - rede
+
+  # evolution-api:
+  #   image: atendai/evolution-api:latest
+  #   command: ["node", "./dist/src/main.js"]
+  #   container_name: evolution_api
+  #   restart: always
+  #   ports:
+  #     - "8080:8080"
+  #   env_file: .env.evolution
+  #   volumes:
+  #     - evolution_store:/evolution/store
+  #     - evolution_instances:/evolution/instances
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
+  #   networks:
+  #     - rede
+
+  flowise:
+    image: flowiseai/flowise:latest
+    restart: always
+    env_file: .env.flowise
+    
+    ports:
+      - 5000:5000
+    volumes:
+      - ~/.flowise:/root/.flowise
+    entrypoint: /bin/sh -c "sleep 3; flowise start"
+    networks:
+      - rede
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ngrok
+    depends_on:
+      - n8n
+    environment:
+      - NGROK_AUTHTOKEN=29aFgTqRqRQbrdpGzJSEdvbzsBx_7kr7dCFtAAGs7Z7nqwSQi # Substitua pelo token da sua conta Ngrok
+      - NGROK_REGION=sa
+    command: http 5678
+    networks:
+      - rede
+volumes:
+  db_data:
+  s3_data:
+  evolution_store:
+  evolution_instances:
+  evolution_redis:
+  traefik_data:
+  n8n_data:
+
+networks:
+  rede:
+    driver: bridge
