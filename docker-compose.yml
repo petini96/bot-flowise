@@ -31,7 +31,7 @@ services:
       
   typebot-builder:
     ports:
-      - 3001:3000
+      - 0.0.0.0:3001:3000
     image: baptistearno/typebot-builder:latest
     restart: always
     depends_on:
@@ -42,7 +42,7 @@ services:
 
   typebot-viewer:
     ports:
-      - '3002:3000'
+      - '0.0.0.0:3002:3000'
     image: baptistearno/typebot-viewer:latest
     restart: always
     env_file: .env.typebot.viewer
@@ -99,23 +99,23 @@ services:
     networks:
       - rede
 
-  evolution-api:
-      container_name: evolution_api
-      image: atendai/evolution-api:v2.1.1
-      restart: always
-      ports:
-        - "8080:8080"
-      env_file: .env.evolution
-      volumes:
-        - evolution_instances:/evolution/instances
-      extra_hosts:
-        - "host.docker.internal:host-gateway"
-      labels:
-        - traefik.enable=true
-        - traefik.http.routers.evolutionapi.rule=Host(`cb0b-177-5-247-196.ngrok-free.app`) && PathPrefix(`/api/evolution`)
-        - traefik.http.services.evolutionapi.loadbalancer.server.port=8080
-      networks:
-        - rede
+  # evolution-api:
+  #     container_name: evolution_api
+  #     image: atendai/evolution-api:v2.1.1
+  #     restart: always
+  #     ports:
+  #       - "8080:8080"
+  #     env_file: .env.evolution
+  #     volumes:
+  #       - evolution_instances:/evolution/instances
+  #     extra_hosts:
+  #       - "host.docker.internal:host-gateway"
+  #     labels:
+  #       - traefik.enable=true
+  #       - traefik.http.routers.evolutionapi.rule=Host(`cb0b-177-5-247-196.ngrok-free.app`) && PathPrefix(`/api/evolution`)
+  #       - traefik.http.services.evolutionapi.loadbalancer.server.port=8080
+  #     networks:
+  #       - rede
 
   traefik:
     container_name: traefik
@@ -179,21 +179,21 @@ services:
     networks:
         - rede
 
-  # evolution-api:
-  #   image: atendai/evolution-api:latest
-  #   command: ["node", "./dist/src/main.js"]
-  #   container_name: evolution_api
-  #   restart: always
-  #   ports:
-  #     - "8080:8080"
-  #   env_file: .env.evolution
-  #   volumes:
-  #     - evolution_store:/evolution/store
-  #     - evolution_instances:/evolution/instances
-  #   extra_hosts:
-  #     - "host.docker.internal:host-gateway"
-  #   networks:
-  #     - rede
+  evolution-api:
+    image: atendai/evolution-api:latest
+    command: ["node", "./dist/src/main.js"]
+    container_name: evolution_api
+    restart: always
+    ports:
+      - "0.0.0.0:8080:8080"
+    env_file: .env.evolution
+    volumes:
+      - evolution_store:/evolution/store
+      - evolution_instances:/evolution/instances
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - rede
 
   flowise:
     image: flowiseai/flowise:latest
@@ -208,17 +208,40 @@ services:
     networks:
       - rede
 
+  # ngrok:
+  #   image: ngrok/ngrok:latest
+  #   command:
+  #     - "http"
+  #     - "http://host.docker.internal:8080"
+  #   environment:
+  #     NGROK_AUTHTOKEN: 29aFgTqRqRQbrdpGzJSEdvbzsBx_7kr7dCFtAAGs7Z7nqwSQi
+  #   ports:
+  #     - 4040:4040
+  
   ngrok:
     image: ngrok/ngrok:latest
-    container_name: ngrok
-    depends_on:
-      - n8n
-    environment:
-      - NGROK_AUTHTOKEN=29aFgTqRqRQbrdpGzJSEdvbzsBx_7kr7dCFtAAGs7Z7nqwSQi # Substitua pelo token da sua conta Ngrok
-      - NGROK_REGION=sa
-    command: http 5678
-    networks:
-      - rede
+    restart: unless-stopped
+    command:
+      - "start"
+      - "--all"
+      - "--config"
+      - "/etc/ngrok.yml"
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml
+    ports:
+      - 4040:4040
+
+  # ngrok:
+  #   image: ngrok/ngrok:latest
+  #   container_name: ngrok
+  #   environment:
+  #     - NGROK_AUTHTOKEN= 29aFgTqRqRQbrdpGzJSEdvbzsBx_7kr7dCFtAAGs7Z7nqwSQi
+  #   command: start --all --config /ngrok.yml && ngrok config upgrade
+  #   volumes:
+  #     - ./ngrok.yml:/ngrok.yml
+  #   networks:
+  #     - rede
+
 volumes:
   db_data:
   s3_data:

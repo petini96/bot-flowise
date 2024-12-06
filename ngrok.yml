@@ -1,0 +1,13 @@
+version: "2"
+authtoken: 29aFgTqRqRQbrdpGzJSEdvbzsBx_7kr7dCFtAAGs7Z7nqwSQi
+region: sa
+tunnels:
+  typebotbuilder:
+    proto: http
+    addr: 3001
+  typebotviewer:
+    proto: http
+    addr: 3002
+  portaevolution:
+    proto: http
+    addr: 8080
