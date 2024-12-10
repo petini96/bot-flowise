@@ -30,6 +30,7 @@ services:
       - 6379:6379
       
   typebot-builder:
+    container_name: typebot_builder
     ports:
       - 0.0.0.0:3001:3000
     image: baptistearno/typebot-builder:latest
@@ -41,6 +42,7 @@ services:
       - rede
 
   typebot-viewer:
+    container_name: typebot_viewer
     ports:
       - '0.0.0.0:3002:3000'
     image: baptistearno/typebot-viewer:latest
@@ -80,24 +82,24 @@ services:
     networks:
       - rede
 
-  createbuckets:
-    image: minio/mc
-    depends_on:
-      minio:
-        condition: service_healthy
-    restart: on-failure
-    entrypoint: >
-      /bin/sh -c "
-      sleep 10;
-      /usr/bin/mc config host add minio http://minio:9000 minio minio123;
-      /usr/bin/mc mb minio/typebot;
-      /usr/bin/mc mb minio/mybucket;
-      /usr/bin/mc anonymous set public minio/mybucket;
-      exit 0;"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - rede
+  # createbuckets:
+  #   image: minio/mc
+  #   depends_on:
+  #     minio:
+  #       condition: service_healthy
+  #   restart: on-failure
+  #   entrypoint: >
+  #     /bin/sh -c "
+  #     sleep 10;
+  #     /usr/bin/mc config host add minio http://minio:9000 minio minio123;
+  #     /usr/bin/mc mb minio/typebot;
+  #     /usr/bin/mc mb minio/mybucket;
+  #     /usr/bin/mc anonymous set public minio/mybucket;
+  #     exit 0;"
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
+  #   networks:
+  #     - rede
 
   # evolution-api:
   #     container_name: evolution_api
@@ -116,63 +118,13 @@ services:
   #       - traefik.http.services.evolutionapi.loadbalancer.server.port=8080
   #     networks:
   #       - rede
-
-  traefik:
-    container_name: traefik
-    image: "traefik"
-    restart: always
-    command:
-      - "--api=true"
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      - "--entrypoints.websecure.address=:443"
-      - --providers.docker=true
-      - --providers.file.directory=/etc/traefik/dynamic_conf
-      - --providers.file.watch=true
-      # - "--entrypoints.websecure.http.tls.certificates[0].certFile=/certs/selfsigned.crt"
-      # - "--entrypoints.websecure.http.tls.certificates[0].keyFile=/certs/selfsigned.key"
-      # - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
-      # - "--certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}"
-      # - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      # - traefik_data:/letsencrypt
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /home/vinicius/flowise/certs:/certs
-      # - /home/vinicius/flowise/traefik.toml:/etc/traefik/traefik.toml
-      - /home/vinicius/flowise/traefik.yml:/etc/traefik/dynamic_conf/conf.yml:ro
-    networks:
-        - rede
-
+ 
   n8n:
     container_name: n8n
     image: docker.n8n.io/n8nio/n8n
     restart: always
     ports:
       - "0.0.0.0:5678:5678"
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.n8n.rule=Host(`cb0b-177-5-247-196.ngrok-free.app`)
-       - traefik.http.services.n8n.loadbalancer.server.port=5678
-      # - traefik.http.routers.n8n.rule=Host(`${DOMAIN_NAME}`)
-      # - traefik.http.routers.n8n.tls=false
-      # - traefik.http.routers.n8n.entrypoints=web,websecure
-      # - traefik.http.routers.n8n.tls.certresolver=mytlschallenge
-      # - traefik.http.middlewares.n8n.headers.SSLRedirect=false
-      # - traefik.http.middlewares.n8n.headers.STSSeconds=315360000
-      # - traefik.http.middlewares.n8n.headers.browserXSSFilter=true
-      # - traefik.http.middlewares.n8n.headers.contentTypeNosniff=true
-      # - traefik.http.middlewares.n8n.headers.forceSTSHeader=true
-      # - traefik.http.middlewares.n8n.headers.SSLHost=${DOMAIN_NAME}
-      # - traefik.http.middlewares.n8n.headers.STSIncludeSubdomains=true
-      # - traefik.http.middlewares.n8n.headers.STSPreload=true
-      # - traefik.http.routers.n8n.middlewares=n8n@docker
     env_file: .env.n8n
     volumes:
       - n8n_data:/home/node/.n8n
@@ -185,7 +137,7 @@ services:
     container_name: evolution_api
     restart: always
     ports:
-      - "0.0.0.0:8080:8080"
+      - "8080:8080"
     env_file: .env.evolution
     volumes:
       - evolution_store:/evolution/store
@@ -199,7 +151,6 @@ services:
     image: flowiseai/flowise:latest
     restart: always
     env_file: .env.flowise
-    
     ports:
       - 5000:5000
     volumes:
@@ -208,39 +159,32 @@ services:
     networks:
       - rede
 
-  # ngrok:
-  #   image: ngrok/ngrok:latest
-  #   command:
-  #     - "http"
-  #     - "http://host.docker.internal:8080"
-  #   environment:
-  #     NGROK_AUTHTOKEN: 29aFgTqRqRQbrdpGzJSEdvbzsBx_7kr7dCFtAAGs7Z7nqwSQi
-  #   ports:
-  #     - 4040:4040
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - evolution-api
+    volumes:
+      - ./certs:/etc/nginx/ssl
+      - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template:ro
+    networks:
+      - rede
   
   ngrok:
     image: ngrok/ngrok:latest
     restart: unless-stopped
     command:
-      - "start"
-      - "--all"
-      - "--config"
-      - "/etc/ngrok.yml"
+      - "sh"
+      - "-c"
+      - "ngrok start --all --config /etc/ngrok.yml && ngrok list tunnels"
     volumes:
       - ./ngrok.yml:/etc/ngrok.yml
-    ports:
-      - 4040:4040
+    # ports:
+    #   - 4040:4040
+    network_mode: "host"
 
-  # ngrok:
-  #   image: ngrok/ngrok:latest
-  #   container_name: ngrok
-  #   environment:
-  #     - NGROK_AUTHTOKEN= 29aFgTqRqRQbrdpGzJSEdvbzsBx_7kr7dCFtAAGs7Z7nqwSQi
-  #   command: start --all --config /ngrok.yml && ngrok config upgrade
-  #   volumes:
-  #     - ./ngrok.yml:/ngrok.yml
-  #   networks:
-  #     - rede
 
 volumes:
   db_data:

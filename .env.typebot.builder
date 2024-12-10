@@ -1,6 +1,6 @@
 DATABASE_URL=postgresql://postgres:typebot@typebot-db:5432/typebot
-NEXTAUTH_URL=http://localhost:3001
-NEXT_PUBLIC_VIEWER_URL=http://localhost:3002
+NEXTAUTH_URL=https://c884-177-5-247-196.ngrok-free.app
+NEXT_PUBLIC_VIEWER_URL=https://405e-177-5-247-196.ngrok-free.app
 ENCRYPTION_SECRET=9b6c625184177106275086ddbfa0f8b9
 
 # Configurações de SMTP

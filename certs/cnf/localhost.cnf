@@ -11,12 +11,10 @@ ST = Mato Grosso do Sul
 L = Campo Grande
 O = SENAI
 OU = SENAI
-CN = chatbot.dev
+CN = localhost.msq
 
 [req_ext]
 subjectAltName = @alt_names
 
 [alt_names]
-DNS.1 = localhost
-DNS.2 = chatbot.dev
-DNS.3 = n8n.chatbot.dev
+DNS.1 = localhost.msq

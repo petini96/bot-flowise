@@ -1,0 +1,107 @@
+http {
+    upstream evolution_api {
+        server http://evolution_api:8080;
+    }
+
+    upstream n8n {
+        server http://n8n:5678;
+    }
+
+    upstream typebot_builder {
+        server http://typebot_builder:3001;
+    }
+
+    upstream typebot_viewer {
+        server http://typebot_viewer:3002;
+    }
+
+    # Servidor para evolution.msq
+    server {
+        listen 80;
+        server_name evolution.msq;
+
+        location / {
+            proxy_pass http://evolution_api;  # Requisições para evolution.msq vão para evolution_api
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+
+    # Servidor para n8n.msq
+    server {
+        listen 80;
+        server_name n8n.msq;
+
+        location / {
+            proxy_pass http://n8n;  # Requisições para n8n.msq vão para n8n
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+
+    # Servidor para builder.typebot.msq
+    server {
+        listen 80;
+        server_name builder.typebot.msq;
+
+        location / {
+            proxy_pass http://typebot_builder;  # Requisições para builder.typebot.msq vão para typebot_builder
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+
+    # Servidor para viewer.typebot.msq
+    server {
+        listen 80;
+        server_name viewer.typebot.msq;
+
+        location / {
+            proxy_pass http://typebot_viewer;  # Requisições para viewer.typebot.msq vão para typebot_viewer
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+
+    server {
+        listen 443 ssl;
+        server_name builder.chatbot.msq;
+
+        ssl_certificate /etc/nginx/ssl/builder.chatbot.msq.crt;
+        ssl_certificate_key /etc/nginx/ssl/builder.chatbot.msq.key;
+
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384';
+        ssl_prefer_server_ciphers on;
+
+    underscores_in_headers on;
+        location / {
+            proxy_pass http://google.com;
+        }
+    }
+
+    server {
+        listen 443 ssl;
+        server_name viewer.chatbot.msq;
+
+        ssl_certificate /path/to/viewer.chatbot.msq.crt;
+        ssl_certificate_key /path/to/viewer.chatbot.msq.key;
+
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384';
+        ssl_prefer_server_ciphers on;
+        
+        location / {
+            proxy_pass http://youtube.com;
+        }
+    }
+
+}

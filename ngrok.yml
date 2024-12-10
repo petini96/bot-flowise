@@ -5,9 +5,14 @@ tunnels:
   typebotbuilder:
     proto: http
     addr: 3001
+    host_header: "localhost:3001"
+
   typebotviewer:
     proto: http
     addr: 3002
+    host_header: "localhost:3002"
+
   portaevolution:
     proto: http
     addr: 8080
+    host_header: "localhost:8080"
