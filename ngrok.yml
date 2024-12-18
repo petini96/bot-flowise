@@ -10,7 +10,7 @@ web_allow_hosts:
 tunnels:
   typebotbuilder:
     proto: http
-    addr: http://host.docker.internal:3001
+    addr: http://host.docker.internal:5678
   typebotviewer:
     proto: http
     addr: http://host.docker.internal:3002

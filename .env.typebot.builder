@@ -1,6 +1,6 @@
 DATABASE_URL=postgresql://postgres:typebot@typebot-db:5432/typebot
-NEXTAUTH_URL=https://4207-177-5-247-196.ngrok-free.app
-NEXT_PUBLIC_VIEWER_URL=https://6ff2-177-5-247-196.ngrok-free.app
+NEXTAUTH_URL=https://811c-177-5-247-196.ngrok-free.app
+NEXT_PUBLIC_VIEWER_URL=https://d380-177-5-247-196.ngrok-free.app
 ENCRYPTION_SECRET=9b6c625184177106275086ddbfa0f8b9
 
 # Configurações de SMTP
@@ -18,4 +18,4 @@ EMAIL_STARTTLS=true
 S3_ACCESS_KEY=minio
 S3_SECRET_KEY=minio123
 S3_BUCKET=typebot
-S3_ENDPOINT=http://minio:9000
+S3_ENDPOINT=host.docker.internal/s3

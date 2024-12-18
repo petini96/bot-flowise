@@ -32,7 +32,7 @@ services:
   typebot-builder:
     container_name: typebot_builder
     ports:
-      - 0.0.0.0:3001:3000
+      - 3001:3000
     image: baptistearno/typebot-builder:latest
     restart: always
     depends_on:
@@ -44,7 +44,7 @@ services:
   typebot-viewer:
     container_name: typebot_viewer
     ports:
-      - '0.0.0.0:3002:3000'
+      - '3002:3000'
     image: baptistearno/typebot-viewer:latest
     restart: always
     env_file: .env.typebot.viewer
@@ -66,10 +66,10 @@ services:
       virtual.port: '9000'
       virtual.tls-email:
     image: minio/minio
-    command: server /data --console-address "0.0.0.0:9001"
+    command: server /data --console-address ":9001"
     ports:
-      - '0.0.0.0:9000:9000'
-      - '0.0.0.0:9001:9001'
+      - '9000:9000'
+      - '9001:9001'
     env_file: .env.minio
     volumes:
       - s3_data:/data
@@ -102,23 +102,23 @@ services:
     networks:
       - rede
 
-  # evolution-api:
-  #     container_name: evolution_api
-  #     image: atendai/evolution-api:v2.1.1
-  #     restart: always
-  #     ports:
-  #       - "8080:8080"
-  #     env_file: .env.evolution
-  #     volumes:
-  #       - evolution_instances:/evolution/instances
-  #     extra_hosts:
-  #       - "host.docker.internal:host-gateway"
-  #     labels:
-  #       - traefik.enable=true
-  #       - traefik.http.routers.evolutionapi.rule=Host(`cb0b-177-5-247-196.ngrok-free.app`) && PathPrefix(`/api/evolution`)
-  #       - traefik.http.services.evolutionapi.loadbalancer.server.port=8080
-  #     networks:
-  #       - rede
+  evolution-api:
+      container_name: evolution_api
+      image: atendai/evolution-api:v2.1.1
+      restart: always
+      ports:
+        - "8080:8080"
+      env_file: .env.evolution
+      volumes:
+        - evolution_instances:/evolution/instances
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+      # labels:
+      #   - traefik.enable=true
+      #   - traefik.http.routers.evolutionapi.rule=Host(`cb0b-177-5-247-196.ngrok-free.app`) && PathPrefix(`/api/evolution`)
+      #   - traefik.http.services.evolutionapi.loadbalancer.server.port=8080
+      networks:
+        - rede
  
   n8n:
     container_name: n8n
@@ -132,21 +132,21 @@ services:
     networks:
         - rede
 
-  evolution-api:
-    image: atendai/evolution-api:latest
-    command: ["node", "./dist/src/main.js"]
-    container_name: evolution_api
-    restart: always
-    ports:
-      - "0.0.0.0:8080:8080"
-    env_file: .env.evolution
-    volumes:
-      - evolution_store:/evolution/store
-      - evolution_instances:/evolution/instances
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - rede
+  # evolution-api:
+  #   image: atendai/evolution-api:latest
+  #   command: ["node", "./dist/src/main.js"]
+  #   container_name: evolution_api
+  #   restart: always
+  #   ports:
+  #     - "8080:8080"
+  #   env_file: .env.evolution
+  #   volumes:
+  #     - evolution_store:/evolution/store
+  #     - evolution_instances:/evolution/instances
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
+  #   networks:
+  #     - rede
 
   flowise:
     image: flowiseai/flowise:latest
@@ -157,6 +157,8 @@ services:
     volumes:
       - ~/.flowise:/root/.flowise
     entrypoint: /bin/sh -c "sleep 3; flowise start"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - rede
 
